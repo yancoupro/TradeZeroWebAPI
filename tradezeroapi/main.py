@@ -304,77 +304,30 @@ class TradeZero(Time):
 
         # Return the locate information.
         return Data(locate_pps, locate_total, f'Locate available at ${locate_total}')
+    
+    def accept_or_decline_locate(self, symbol: str, decision: str):
+        """
+        Accept or decline the locate offer for a given stock symbol.
+        
+        :param symbol: str, symbol to accept/decline locate.
+        :param decision: str, either 'accept' or 'decline'.
+        :return: str, message indicating the result of the action.
+        :raises Exception: if an invalid decision is provided.
+        """
+        # Ensure the decision is valid.
+        if decision not in ['accept', 'decline']:
+            raise Exception(f"ERROR: Invalid decision provided. Expected 'accept' or 'decline', got '{decision}'")
 
-    # def locate_stock(self, symbol: str, share_amount: int, max_price: float = 0, debug_info: bool = False):
-    #     """
-    #     Locate a stock, requires: stock symbol, and share_amount. optional: max_price.
-    #     if the locate_price is less than max_price: it will accept, else: decline.
-
-    #     :param symbol: str, symbol to locate.
-    #     :param share_amount: int, must be a multiple of 100 (100, 200, 300...)
-    #     :param max_price: float, default: 0, total price you are willing to pay for locates
-    #     :param debug_info: bool, if True it will print info about the locates in the console
-    #     :return: named tuple with the following attributes: 'price_per_share' and 'total'
-    #     :raises Exception: if share_amount is not divisible by 100
-    #     """
-    #     Data = namedtuple('Data', ['price_per_share', 'total'])
-
-    #     if share_amount is not None and share_amount % 100 != 0:
-    #         raise Exception(f'ERROR: share_amount is not divisible by 100 ({share_amount=})')
-
-    #     if not self.load_symbol(symbol):
-    #         return
-
-    #     if self.last <= 1.00:
-    #         print(f'Error: Cannot locate stocks priced under $1.00 ({symbol=}, price={self.last})')
-
-    #     self.driver.find_element(By.ID, "locate-tab-1").click()
-    #     input_symbol = self.driver.find_element(By.ID, "short-list-input-symbol")
-    #     input_symbol.clear()
-    #     input_symbol.send_keys(symbol, Keys.RETURN)
-
-    #     input_shares = self.driver.find_element(By.ID, "short-list-input-shares")
-    #     input_shares.clear()
-    #     input_shares.send_keys(share_amount)
-
-    #     while self.driver.find_element(By.ID, "short-list-locate-status").text == '':
-    #         time.sleep(0.1)
-
-    #     if self.driver.find_element(By.ID, "short-list-locate-status").text == 'Easy to borrow':
-    #         locate_pps = 0.00
-    #         locate_total = 0.00
-    #         if debug_info:
-    #             print(colored(f'Stock ({symbol}) is "Easy to borrow"', 'green'))
-    #         return Data(locate_pps, locate_total)
-
-    #     self.driver.find_element(By.ID, "short-list-button-locate").click()
-
-    #     for i in range(300):
-    #         try:
-    #             locate_pps = float(self.driver.find_element(By.ID, f"oitem-l-{symbol.upper()}-cell-2").text)
-    #             locate_total = float(self.driver.find_element(By.ID, f"oitem-l-{symbol.upper()}-cell-6").text)
-    #             break
-
-    #         except (ValueError, NoSuchElementException, StaleElementReferenceException):
-    #             time.sleep(0.15)
-    #             if i == 15 or i == 299:
-    #                 insufficient_bp = 'Insufficient BP to short a position with requested quantity.'
-    #                 last_notif = self.Notification.get_last_notification_message()
-    #                 if insufficient_bp in last_notif:
-    #                     warnings.warn(f"ERROR! {insufficient_bp}")
-    #                     return
-    #     else:
-    #         raise Exception(f'Error: not able to locate symbol element ({symbol=})')
-
-    #     if locate_total <= max_price:
-    #         self.driver.find_element(By.XPATH, f'//*[@id="oitem-l-{symbol.upper()}-cell-8"]/span[1]').click()
-    #         if debug_info:
-    #             print(colored(f'HTB Locate accepted ({symbol}, $ {locate_total})', 'cyan'))
-    #     else:
-    #         self.driver.find_element(By.XPATH, f'//*[@id="oitem-l-{symbol.upper()}-cell-8"]/span[2]').click()
-
-    #     return Data(locate_pps, locate_total)
-    #     # TODO create a function to get the pps and another one that just locates the shares
+        # Check if the symbol locate offer is present.
+        try:
+            if decision == 'accept':
+                self.driver.find_element(By.XPATH, f'//*[@id="oitem-l-{symbol.upper()}-cell-8"]/span[1]').click()
+                return f"Locate offer for {symbol} has been accepted."
+            else:
+                self.driver.find_element(By.XPATH, f'//*[@id="oitem-l-{symbol.upper()}-cell-8"]/span[2]').click()
+                return f"Locate offer for {symbol} has been declined."
+        except NoSuchElementException:
+            return f"ERROR: Locate offer for {symbol} not found or already processed."
 
     def credit_locates(self, symbol: str, quantity=None):
         """
