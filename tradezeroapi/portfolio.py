@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import warnings
-from typing import overload, Optional, Literal
-
 import pandas as pd
+
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webdriver import WebDriver
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from typing import overload, Optional, Literal
 
 from .enums import PortfolioTab, OrderType
 
@@ -46,6 +48,51 @@ class Portfolio:
         df = df.set_index('symbol')
         if return_type == 'dict':
             return df.to_dict('index')
+        return df
+
+    def get_inventory(self):
+        """
+        Extracts inventory data from a specific HTML table using Selenium.
+
+        This method identifies a table within a webpage by its ID, iterates through
+        each row of the table, and extracts text from each cell while excluding a 
+        specific, undesired column. It compiles the text into a pandas DataFrame 
+        with predefined column headers. Rows without any table data cells are ignored.
+
+        Returns:
+            pandas.DataFrame: A DataFrame containing the inventory data, structured 
+            according to predefined headers.
+        """
+        # Find the table by ID
+        table = self.driver.find_element(By.ID, "locate-inventory-table")
+        
+        # Find all the rows in the table
+        rows = table.find_elements(By.TAG_NAME, "tr")
+        
+        # Specify the desired headers
+        headers = ['Symbol', 'Available', 'Unavailable', 'Pre-Borrow', 'Action']
+        
+        # Initialize an empty list to hold all row data
+        all_row_data = []
+        
+        # Iterate over the rows
+        for row in rows:
+            # Find all cell tags in this row
+            cells = row.find_elements(By.TAG_NAME, "td")
+            if not cells:
+                # If there are no td tags, it might be the header row with th tags
+                cells = row.find_elements(By.TAG_NAME, "th")
+            # Get the text from each cell, ignoring the fifth cell (if exists)
+            row_data = [cell.text for idx, cell in enumerate(cells) if idx != 4]
+            # Append the row's text to the aggregated list
+            all_row_data.append(row_data)
+        
+        # Exclude any empty rows if they exist
+        all_row_data = [row for row in all_row_data if row]
+        
+        # Create the DataFrame assuming all data rows have the same number of columns as the headers
+        df = pd.DataFrame(all_row_data, columns=headers)
+        
         return df
 
     def open_orders(self) -> pd.DataFrame:
