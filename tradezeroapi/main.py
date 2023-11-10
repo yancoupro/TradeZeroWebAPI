@@ -300,7 +300,7 @@ class TradeZero(Time):
                         warnings.warn(f"ERROR! {insufficient_bp}")
                         return
         else:
-            raise Exception(f'Error: not able to locate symbol element ({symbol=})')
+            warnings.warn(f"ERROR! Can't locate stock for {symbol.upper()}")
 
         # Return the locate information.
         return Data(locate_pps, locate_total, f'Locate available at ${locate_total}')
