@@ -301,6 +301,7 @@ class TradeZero(Time):
                         return
         else:
             warnings.warn(f"ERROR! Can't locate stock for {symbol.upper()}")
+            return None
 
         # Return the locate information.
         return Data(locate_pps, locate_total, f'Locate available at ${locate_total}')
