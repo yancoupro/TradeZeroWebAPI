@@ -50,6 +50,45 @@ class Portfolio:
             return df.to_dict('index')
         return df
 
+    def close_position_overview(self) -> pd.DataFrame:
+        """
+        Extracts a table with the given ID from a webpage and returns its content as a pandas DataFrame.
+
+        The method assumes that the WebDriver instance is already navigated to the page containing the table
+        and that the table has a structure of rows (<tr>) and cells (<td>) within a <tbody> element.
+
+        Parameters:
+        - driver (WebDriver): The WebDriver instance controlling the browser.
+        - table_id (str): The ID attribute of the table element to extract.
+
+        Returns:
+        - DataFrame: A pandas DataFrame containing the table data.
+
+        Example Output:
+        +-------+------+-----+---------+-------+-------+-------+---------+----------------+----------------+-----+
+        | Symbol| Type | Qty | p_close | Entry | Close | PNL   | Day PNL | Opened         | Closed         | O/N |
+        +-------+------+-----+---------+-------+-------+-------+---------+----------------+----------------+-----+
+        | ACET  | Long | 100 | 1.180   | 1.220 | 1.180 | -4.000| -4.000  | 11-14 10:08:35 | 11-14 10:29:15 | No  |
+        +-------+------+-----+---------+-------+-------+-------+---------+----------------+----------------+-----+
+        """
+        # Find all rows in the table
+        rows = self.driver.find_elements(By.XPATH, '//table[@id="cpTable-1"]/tbody/tr')
+
+        # List to hold all rows of data
+        data: list[list[str]] = []
+
+        # Extract data from each row
+        for row in rows:
+            cells = row.find_elements(By.TAG_NAME, 'td')
+            row_data: list[str] = [cell.text for cell in cells]
+            data.append(row_data)
+
+        # Column names (these should be customized to match the specific table's column headers)
+        column_names: list[str] = ["Symbol", "Type", "Qty", "p_close", "Entry", "Close", "PNL", "Day PNL", "Opened", "Closed", "O/N"]
+
+        # Create and return the DataFrame
+        return pd.DataFrame(data, columns=column_names)
+
     def get_inventory(self):
         """
         Extracts inventory data from a specific HTML table using Selenium.
