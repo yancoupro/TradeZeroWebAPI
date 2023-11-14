@@ -86,8 +86,14 @@ class Portfolio:
         # Column names (these should be customized to match the specific table's column headers)
         column_names: list[str] = ["Symbol", "Type", "Qty", "p_close", "Entry", "Close", "PNL", "Day PNL", "Opened", "Closed", "O/N"]
 
-        # Create and return the DataFrame
-        return pd.DataFrame(data, columns=column_names)
+        # Create the DataFrame
+        df = pd.DataFrame(data, columns=column_names)
+        
+        # Set 'Symbol' column as the index of the DataFrame
+        df.set_index('Symbol', inplace=True)
+
+        # Return the DataFrame
+        return df
 
     def get_inventory(self):
         """
