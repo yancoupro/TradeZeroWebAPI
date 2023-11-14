@@ -57,10 +57,6 @@ class Portfolio:
         The method assumes that the WebDriver instance is already navigated to the page containing the table
         and that the table has a structure of rows (<tr>) and cells (<td>) within a <tbody> element.
 
-        Parameters:
-        - driver (WebDriver): The WebDriver instance controlling the browser.
-        - table_id (str): The ID attribute of the table element to extract.
-
         Returns:
         - DataFrame: A pandas DataFrame containing the table data.
 
@@ -71,6 +67,10 @@ class Portfolio:
         | ACET  | Long | 100 | 1.180   | 1.220 | 1.180 | -4.000| -4.000  | 11-14 10:08:35 | 11-14 10:29:15 | No  |
         +-------+------+-----+---------+-------+-------+-------+---------+----------------+----------------+-----+
         """
+
+        # First, click on the 'Closed Positions' tab to make sure it's active
+        self.driver.find_element(By.ID, "portfolio-tab-cp-1").click()
+
         # Find all rows in the table
         rows = self.driver.find_elements(By.XPATH, '//table[@id="cpTable-1"]/tbody/tr')
 
