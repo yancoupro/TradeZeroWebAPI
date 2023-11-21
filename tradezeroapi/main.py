@@ -285,7 +285,7 @@ class TradeZero(Time):
 
         self.driver.find_element(By.ID, "short-list-button-locate").click()
 
-        for i in range(300):
+        for i in range(10):
             try:
                 locate_pps = float(self.driver.find_element(By.ID, f"oitem-l-{symbol.upper()}-cell-2").text)
                 locate_total = float(self.driver.find_element(By.ID, f"oitem-l-{symbol.upper()}-cell-6").text)
