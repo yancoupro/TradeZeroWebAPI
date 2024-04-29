@@ -23,7 +23,7 @@ from .enums import Order, TIF
 
 os.system('color')
 
-TZ_HOME_URL = 'https://standard.tradezeroweb.us/'
+TZ_HOME_URL = 'https://standard.tradezero.ca/'
 
 class TradeZero(Time):
     def __init__(self, user_name: str, password: str, headless: bool = False,
@@ -246,7 +246,7 @@ class TradeZero(Time):
     def locate_stock(self, symbol: str, share_amount: int, debug_info: bool = False):
         """
         Locate a stock, requires: stock symbol, and share_amount.
-        
+
         :param symbol: str, symbol to locate.
         :param share_amount: int, must be a multiple of 100 (100, 200, 300...)
         :param debug_info: bool, if True it will print info about the locates in the console
@@ -305,11 +305,11 @@ class TradeZero(Time):
 
         # Return the locate information.
         return Data(locate_pps, locate_total, f'Locate available at ${locate_total}')
-    
+
     def accept_or_decline_locate(self, symbol: str, decision: str):
         """
         Accept or decline the locate offer for a given stock symbol.
-        
+
         :param symbol: str, symbol to accept/decline locate.
         :param decision: str, either 'accept' or 'decline'.
         :return: str, message indicating the result of the action.
