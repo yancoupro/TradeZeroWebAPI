@@ -14,6 +14,7 @@ from selenium.webdriver.support.ui import Select
 from selenium.common.exceptions import NoSuchElementException, WebDriverException, StaleElementReferenceException
 from termcolor import colored
 
+from .igos_webdriver import Chrome
 from .time_helpers import Time, Timer, time_it
 from .watchlist import Watchlist
 from .portfolio import Portfolio
