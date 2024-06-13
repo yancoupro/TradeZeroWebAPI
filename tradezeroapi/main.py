@@ -8,6 +8,7 @@ from collections import namedtuple
 from selenium.webdriver.chrome.service import Service as ChromeService
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium import webdriver
+from igos_webdriver import Chrome
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import Select
@@ -19,15 +20,22 @@ from .watchlist import Watchlist
 from .portfolio import Portfolio
 from .notification import Notification
 from .account import Account
-from .enums import Order, TIF
+from .enums import Order, TIF, OrderType
 
-os.system('color')
+
+def get_order_type_from_string(value: str) -> str:
+    for order_type in OrderType:
+        if order_type.value == value:
+            return order_type.name
+    return None
+
 
 TZ_HOME_URL = 'https://standard.tradezero.ca/'
 
+
 class TradeZero(Time):
     def __init__(self, user_name: str, password: str, headless: bool = False,
-                 hide_attributes: bool = False):
+                 hide_attributes: bool = False, load_chrome: bool = True):
         """
         :param user_name: TradeZero user_name
         :param password: TradeZero password
@@ -35,18 +43,22 @@ class TradeZero(Time):
         :param hide_attributes: bool, if True: Hide account attributes (acc username, equity, total exposure...)
         """
         super().__init__()
-        self.user_name = user_name
-        self.password = password
-        self.hide_attributes = hide_attributes
+        if load_chrome:
+            self.user_name = user_name
+            self.password = password
+            self.hide_attributes = hide_attributes
 
-        service = ChromeService(ChromeDriverManager().install())
-        options = webdriver.ChromeOptions()
-        options.add_experimental_option('excludeSwitches', ['enable-logging'])
-        if headless is True:
-            options.headless = headless
+            service = ChromeService(ChromeDriverManager().install())
+            options = webdriver.ChromeOptions()
+            options.add_experimental_option('excludeSwitches', ['enable-logging'])
+            if headless is True:
+                options.headless = headless
 
-        self.driver = webdriver.Chrome(service=service, options=options)
-        self.driver.get(TZ_HOME_URL)
+            self.driver = Chrome(service=service, options=options)
+            self.driver.set_window_size(1600, 900)
+            self.driver.get(TZ_HOME_URL)
+        else:
+            self.driver = None
 
         self.Watchlist = Watchlist(self.driver)
         self.Portfolio = Portfolio(self.driver)
@@ -87,11 +99,10 @@ class TradeZero(Time):
         password_form = self.driver.find_element(By.ID, "password")
         password_form.send_keys(self.password, Keys.RETURN)
 
-        self._dom_fully_loaded(150)
+        while not self._dom_fully_loaded(150):
+            print("dom not fully loaded...")
         if self.hide_attributes:
             self.Account.hide_attributes()
-
-        Select(self.driver.find_element(By.ID, "trading-order-select-type")).select_by_index(1)
 
     def conn(self, log_tz_conn: bool = False):
         """
@@ -162,9 +173,10 @@ class TradeZero(Time):
             if price == '':
                 time.sleep(0.01)
 
-            elif price.isdigit() and float(price) == 0:
-                warnings.warn(f"Market Closed, ask/bid = {price}")
-                return False
+            # elif price.isdigit() and float(price) == 0:
+                # not true ! halt would have the same result
+                # warnings.warn(f"Market Closed, ask/bid = {price}")
+                # return False
 
             elif price.isdigit():
                 return True
@@ -264,7 +276,8 @@ class TradeZero(Time):
         if self.last <= 1.00:
             print(f'Error: Cannot locate stocks priced under $1.00 ({symbol=}, price={self.last})')
 
-        self.driver.find_element(By.ID, "locate-tab-1").click()
+        # self.driver.find_element(By.ID, "locate-tab-1").click()
+        self.driver.click_element((By.ID, "locate-tab-1"))
         input_symbol = self.driver.find_element(By.ID, "short-list-input-symbol")
         input_symbol.clear()
         input_symbol.send_keys(symbol, Keys.RETURN)

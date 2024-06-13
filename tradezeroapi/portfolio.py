@@ -3,11 +3,14 @@ from __future__ import annotations
 import warnings
 import pandas as pd
 
-from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webdriver import WebDriver
-from selenium import webdriver
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import ElementClickInterceptedException, TimeoutException, NoSuchElementException, \
+    StaleElementReferenceException
 from typing import overload, Optional, Literal
+import time
 
 from .enums import PortfolioTab, OrderType
 
@@ -84,11 +87,12 @@ class Portfolio:
             data.append(row_data)
 
         # Column names (these should be customized to match the specific table's column headers)
-        column_names: list[str] = ["Symbol", "Type", "Qty", "p_close", "Entry", "Close", "PNL", "Day PNL", "Opened", "Closed", "O/N"]
+        column_names: list[str] = ["Symbol", "Type", "Qty", "p_close", "Entry", "Close", "PNL", "Day PNL", "Opened",
+                                   "Closed", "O/N"]
 
         # Create the DataFrame
         df = pd.DataFrame(data, columns=column_names)
-        
+
         # Set 'Symbol' column as the index of the DataFrame
         df.set_index('Symbol', inplace=True)
 
@@ -100,26 +104,26 @@ class Portfolio:
         Extracts inventory data from a specific HTML table using Selenium.
 
         This method identifies a table within a webpage by its ID, iterates through
-        each row of the table, and extracts text from each cell while excluding a 
-        specific, undesired column. It compiles the text into a pandas DataFrame 
+        each row of the table, and extracts text from each cell while excluding a
+        specific, undesired column. It compiles the text into a pandas DataFrame
         with predefined column headers. Rows without any table data cells are ignored.
 
         Returns:
-            pandas.DataFrame: A DataFrame containing the inventory data, structured 
+            pandas.DataFrame: A DataFrame containing the inventory data, structured
             according to predefined headers.
         """
         # Find the table by ID
         table = self.driver.find_element(By.ID, "locate-inventory-table")
-        
+
         # Find all the rows in the table
         rows = table.find_elements(By.TAG_NAME, "tr")
-        
+
         # Specify the desired headers
         headers = ['Symbol', 'Available', 'Unavailable', 'Pre-Borrow', 'Action']
-        
+
         # Initialize an empty list to hold all row data
         all_row_data = []
-        
+
         # Iterate over the rows
         for row in rows:
             # Find all cell tags in this row
@@ -131,13 +135,13 @@ class Portfolio:
             row_data = [cell.text for idx, cell in enumerate(cells) if idx != 4]
             # Append the row's text to the aggregated list
             all_row_data.append(row_data)
-        
+
         # Exclude any empty rows if they exist
         all_row_data = [row for row in all_row_data if row]
-        
+
         # Create the DataFrame assuming all data rows have the same number of columns as the headers
         df = pd.DataFrame(all_row_data, columns=headers)
-        
+
         return df
 
     def open_orders(self) -> pd.DataFrame:
@@ -177,8 +181,10 @@ class Portfolio:
         :param tab: enum of PortfolioTab
         :return: None
         """
-        portfolio_tab = self.driver.find_element(By.ID, tab)
-        portfolio_tab.click()
+        # portfolio_tab = self.driver.find_element(By.ID, tab)
+        portfolio_tab_locator = (By.CSS_SELECTOR, f"a#{tab.value}")
+        self.driver.click_element(portfolio_tab_locator)
+
 
     def get_active_orders(self, return_type: str = 'df'):
         """
@@ -192,10 +198,14 @@ class Portfolio:
             warnings.warn('There are no active orders')
             return
 
+        order_ids = [order.get_attribute("order-id") for order in active_orders]
+
         df = pd.read_html(self.driver.page_source, attrs={'id': 'aoTable-1'})[0]
         df = df.drop(0, axis=1)  # remove the first column which contains the button "CANCEL"
         df.columns = ['ref_number', 'symbol', 'side', 'qty', 'type', 'status', 'tif', 'limit', 'stop', 'placed']
         # df = df.set_index('symbol')  # cant set it as a column since its not always unique
+
+        df['order_id'] = order_ids
 
         if return_type == 'dict':
             return df.to_dict('index')
@@ -210,7 +220,7 @@ class Portfolio:
         """
         return symbol.upper() in self.get_active_orders()['symbol'].values
 
-    def cancel_active_order(self, symbol: str, order_type: OrderType) -> None:
+    def cancel_active_order(self, symbol: str, order_type: OrderType = None) -> None:
         """
         Cancel a pending order
 
@@ -222,14 +232,35 @@ class Portfolio:
         self._switch_portfolio_tab(tab=PortfolioTab.active_orders)
 
         df = self.get_active_orders()
-        assert symbol in df['symbol'].values, f'Given symbol {symbol} is not present in the active orders tab'
+        if df is None:
+            warnings.warn('There are no active orders')
+            return
+        if symbol not in df['symbol'].values:
+            warnings.warn(f'Given symbol {symbol} is not present in the active orders tab')
+            return
 
         # find the ref-id of all the orders we have to cancel:
-        filt = (df['symbol'] == symbol) & (df['type'] == order_type)
-        ids_to_cancel = df[filt]['ref_number'].values
+        filt = (df['symbol'] == symbol)
+        if order_type is not None:
+            filt = filt & (df['type'] == order_type)
+        ids_to_cancel = df[filt]['order_id'].values
         ids_to_cancel = [x.replace('S.', '') for x in ids_to_cancel]
 
         for order_id in ids_to_cancel:
-            cancel_button = self.driver.find_element(
-                By.XPATH, f'//div[@id="portfolio-content-tab-ao-1"]//*[@order-id="{order_id}"]/td[@class="red"]')
-            cancel_button.click()
+            # xpath = f'//div[@id="portfolio-content-tab-ao-1"]//*[@order-id="{order_id}"]/td[@class="red"]'
+            # xpath = f'//div[@id="portfolio-content-tab-ao-1"]//tr/td[text()="{symbol}"]/ancestor::tr/td[text()="CANCEL"]'
+            try:
+                xpath = f'//div[@id="portfolio-content-tab-ao-1"]//tr[@order-id="{order_id}"]/td[text()="CANCEL"]'
+                cancel_button = self.driver.find_element(
+                    By.XPATH, xpath)
+                # print(f"found cancel button {cancel_button}")
+            except NoSuchElementException:
+                print(f"Could not find cancel button for order {order_id}")
+                continue
+            try:
+                cancel_button.click()
+            except StaleElementReferenceException:
+                print(f"cancel button is unavailalble {order_id}")
+                continue
+
+        time.sleep(2)
