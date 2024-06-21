@@ -270,8 +270,8 @@ class TradeZero(Time):
         if share_amount is not None and share_amount % 100 != 0:
             raise Exception(f'ERROR: share_amount is not divisible by 100 ({share_amount=})')
 
-        if not self.load_symbol(symbol):
-            return
+        # if not self.load_symbol(symbol):
+        #     return
 
         if self.last <= 1.00:
             print(f'Error: Cannot locate stocks priced under $1.00 ({symbol=}, price={self.last})')
