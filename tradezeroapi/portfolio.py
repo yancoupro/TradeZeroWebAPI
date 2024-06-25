@@ -185,8 +185,7 @@ class Portfolio:
         portfolio_tab_locator = (By.CSS_SELECTOR, f"a#{tab.value}")
         self.driver.click_element(portfolio_tab_locator)
 
-
-    def get_active_orders(self, return_type: str = 'df'):
+    def get_active_orders(self, symbol=None, order_type=None, return_type: str = 'df'):
         """
         Get a dataframe with all the active orders and their info
 
@@ -196,7 +195,7 @@ class Portfolio:
         active_orders = self.driver.find_elements(By.XPATH, '//*[@id="aoTable-1"]/tbody/tr[@order-id]')
         if len(active_orders) == 0:
             warnings.warn('There are no active orders')
-            return
+            return []
 
         order_ids = [order.get_attribute("order-id") for order in active_orders]
 
@@ -206,10 +205,21 @@ class Portfolio:
         # df = df.set_index('symbol')  # cant set it as a column since its not always unique
 
         df['order_id'] = order_ids
+        if symbol:
+            filt = (df['symbol'] == symbol)
+        else:
+            filt = pd.Series([True] * len(df))  # Initialize filt with all True values
+        if order_type:
+            filt = filt & (df['type'] == order_type)
+        fdf = df[filt]
+
+        if len(fdf) == 0:
+            warnings.warn('There are no FILTERED active orders')
+            return []
 
         if return_type == 'dict':
-            return df.to_dict('index')
-        return df
+            return fdf.to_dict('index')
+        return fdf
 
     def symbol_present_in_active_orders(self, symbol: str) -> bool:
         """
@@ -231,19 +241,10 @@ class Portfolio:
         symbol = symbol.upper()
         self._switch_portfolio_tab(tab=PortfolioTab.active_orders)
 
-        df = self.get_active_orders()
-        if df is None:
-            warnings.warn('There are no active orders')
+        df = self.get_active_orders(symbol, order_type)
+        if len(df) == 0:
             return
-        if symbol not in df['symbol'].values:
-            warnings.warn(f'Given symbol {symbol} is not present in the active orders tab')
-            return
-
-        # find the ref-id of all the orders we have to cancel:
-        filt = (df['symbol'] == symbol)
-        if order_type is not None:
-            filt = filt & (df['type'] == order_type)
-        ids_to_cancel = df[filt]['order_id'].values
+        ids_to_cancel = df['order_id'].values
         ids_to_cancel = [x.replace('S.', '') for x in ids_to_cancel]
 
         for order_id in ids_to_cancel:
