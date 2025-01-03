@@ -119,7 +119,7 @@ class Portfolio:
         rows = table.find_elements(By.TAG_NAME, "tr")
 
         # Specify the desired headers
-        headers = ['Symbol', 'Available', 'Unavailable', 'Pre-Borrow', 'Action']
+         headers = ['Symbol', 'Type', 'Available', 'Unavailable', 'Action']
 
         # Initialize an empty list to hold all row data
         all_row_data = []
