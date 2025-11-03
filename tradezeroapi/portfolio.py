@@ -46,7 +46,8 @@ class Portfolio:
             return None
 
         df.columns = [
-            'symbol', 'type', 'qty', 'p_close', 'entry', 'price', 'change', '%change', 'day_pnl', 'pnl', 'overnight'
+            'symbol', 'type', 'qty', 'p_close', 'entry', 'price', 'change', '%change', 'day_pnl', 'pnl', 'D', 'G', 'T',
+            'V', 'Rho', 'overnight'
         ]
         df = df.set_index('symbol')
         if return_type == 'dict':
